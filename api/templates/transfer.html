@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MY BANK</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+
+            background: red;
+            padding: 30px;
+
+            border-radius: 15px;
+
+            width: 400px;
+
+            box-shadow: 0px 5px 20px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            text-align: center;
+            color: #0A3D62;
+        }
+
+        label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        input {
+
+            width: 100%;
+
+            padding: 10px;
+
+            margin-top: 5px;
+            margin-bottom: 15px;
+
+            border: 1px solid #ccc;
+            border-radius: 8px;
+
+            box-sizing: border-box;
+        }
+
+        button {
+
+            width: 100%;
+
+            background: #0A3D62;
+
+            color: white;
+
+            border: none;
+
+            padding: 12px;
+
+            border-radius: 8px;
+
+            cursor: pointer;
+
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #1B4F72;
+        }
+
+        #result {
+
+            margin-top: 20px;
+
+            padding: 10px;
+
+            border-radius: 8px;
+
+            font-weight: bold;
+
+            text-align: center;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>CIH BANK</h1>
+
+    <label>From Account</label>
+    <input
+        type="text"
+        id="from"
+        value=" "
+    >
+
+    <label>To Account</label>
+    <input
+        type="text"
+        id="to"
+        placeholder=" "
+    >
+
+    <label>Amount</label>
+    <input
+        type="number"
+        id="amount"
+        placeholder=" "
+    >
+
+    <button onclick="transferMoney()">
+        Transfer Money
+    </button>
+
+    <div id="result"></div>
+
+</div>
+
+<script>
+
+async function transferMoney() {
+
+    const sender =
+        document.getElementById("from").value;
+
+    const receiver =
+        document.getElementById("to").value;
+
+    const amount =
+        parseInt(
+            document.getElementById("amount").value
+        );
+
+    try {
+
+        const response =
+            await fetch(
+                "http://node1:8080/transfer",
+                {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                        "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        from: sender,
+                        to: receiver,
+                        amount: amount
+
+                    })
+                }
+            );
+
+        const data =
+            await response.json();
+
+        const result =
+            document.getElementById(
+                "result"
+            );
+
+        if (response.ok) {
+
+            result.className =
+                "success";
+
+            result.innerHTML =
+                "✅ " +
+                JSON.stringify(data);
+
+        } else {
+
+            result.className =
+                "error";
+
+            result.innerHTML =
+                "❌ " +
+                JSON.stringify(data);
+
+        }
+
+    }
+
+    catch(error) {
+
+        const result =
+            document.getElementById(
+                "result"
+            );
+
+        result.className =
+            "error";
+
+        result.innerHTML =
+            "Connection Error: " +
+            error;
+
+    }
+
+}
+
+</script>
+
+</body>
+</html>
