@@ -1,0 +1,44 @@
+services:
+
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_DB: bankdb
+      POSTGRES_USER: bankuser
+      POSTGRES_PASSWORD: bankpass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  flask-api:
+    build: ./api
+    container_name: flask-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+
+  bank-frontend:
+    build: ./frontend
+    container_name: bank-frontend
+    ports:
+      - "8001:80"
+    depends_on:
+      - flask-api
+
+  prometheus:
+    build: ./monitoring/prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+
+  grafana:
+    build: ./monitoring/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:

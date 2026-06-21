@@ -1,36 +1,34 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
-import sqlite3
+import psycopg2
 import json
+
+
+def get_connection():
+    return psycopg2.connect(
+        host="postgres",
+        database="bankdb",
+        user="bankuser",
+        password="bankpass"
+    )
+
 
 class BankAPI(BaseHTTPRequestHandler):
 
     def add_cors_headers(self):
-        self.send_header(
-            "Access-Control-Allow-Origin",
-            "*"
-        )
-        self.send_header(
-            "Access-Control-Allow-Methods",
-            "GET, POST, OPTIONS"
-        )
-        self.send_header(
-            "Access-Control-Allow-Headers",
-            "Content-Type"
-        )
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
     def do_OPTIONS(self):
-
         self.send_response(200)
         self.add_cors_headers()
         self.end_headers()
 
     def do_GET(self):
 
-        print(f"GET Request received: {self.path}")
-
         if self.path == "/accounts":
 
-            conn = sqlite3.connect("bank.db")
+            conn = get_connection()
             cur = conn.cursor()
 
             cur.execute(
@@ -39,6 +37,7 @@ class BankAPI(BaseHTTPRequestHandler):
 
             rows = cur.fetchall()
 
+            cur.close()
             conn.close()
 
             accounts = []
@@ -46,15 +45,12 @@ class BankAPI(BaseHTTPRequestHandler):
             for row in rows:
                 accounts.append({
                     "username": row[0],
-                    "balance": row[1]
+                    "balance": float(row[1])
                 })
 
             self.send_response(200)
             self.add_cors_headers()
-            self.send_header(
-                "Content-Type",
-                "application/json"
-            )
+            self.send_header("Content-Type", "application/json")
             self.end_headers()
 
             self.wfile.write(
@@ -65,31 +61,29 @@ class BankAPI(BaseHTTPRequestHandler):
 
             username = self.path.split("/")[-1]
 
-            conn = sqlite3.connect("bank.db")
+            conn = get_connection()
             cur = conn.cursor()
 
             cur.execute(
-                "SELECT balance FROM accounts WHERE username=?",
+                "SELECT balance FROM accounts WHERE username=%s",
                 (username,)
             )
 
             result = cur.fetchone()
 
+            cur.close()
             conn.close()
 
             if result:
 
                 response = {
                     "username": username,
-                    "balance": result[0]
+                    "balance": float(result[0])
                 }
 
                 self.send_response(200)
                 self.add_cors_headers()
-                self.send_header(
-                    "Content-Type",
-                    "application/json"
-                )
+                self.send_header("Content-Type", "application/json")
                 self.end_headers()
 
                 self.wfile.write(
@@ -100,10 +94,7 @@ class BankAPI(BaseHTTPRequestHandler):
 
                 self.send_response(404)
                 self.add_cors_headers()
-                self.send_header(
-                    "Content-Type",
-                    "application/json"
-                )
+                self.send_header("Content-Type", "application/json")
                 self.end_headers()
 
                 self.wfile.write(
@@ -114,10 +105,7 @@ class BankAPI(BaseHTTPRequestHandler):
 
             self.send_response(404)
             self.add_cors_headers()
-            self.send_header(
-                "Content-Type",
-                "application/json"
-            )
+            self.send_header("Content-Type", "application/json")
             self.end_headers()
 
             self.wfile.write(
@@ -126,31 +114,25 @@ class BankAPI(BaseHTTPRequestHandler):
 
     def do_POST(self):
 
-        print(f"POST Request received: {self.path}")
-
         if self.path == "/transfer":
 
             content_length = int(
-                self.headers['Content-Length']
+                self.headers["Content-Length"]
             )
 
-            body = self.rfile.read(
-                content_length
-            )
+            body = self.rfile.read(content_length)
 
-            data = json.loads(
-                body.decode()
-            )
+            data = json.loads(body.decode())
 
             sender = data["from"]
             receiver = data["to"]
-            amount = data["amount"]
+            amount = float(data["amount"])
 
-            conn = sqlite3.connect("bank.db")
+            conn = get_connection()
             cur = conn.cursor()
 
             cur.execute(
-                "SELECT balance FROM accounts WHERE username=?",
+                "SELECT balance FROM accounts WHERE username=%s",
                 (sender,)
             )
 
@@ -166,13 +148,14 @@ class BankAPI(BaseHTTPRequestHandler):
                     b'{"error":"sender not found"}'
                 )
 
+                cur.close()
                 conn.close()
                 return
 
-            sender_balance = result[0]
+            sender_balance = float(result[0])
 
             cur.execute(
-                "SELECT balance FROM accounts WHERE username=?",
+                "SELECT balance FROM accounts WHERE username=%s",
                 (receiver,)
             )
 
@@ -188,6 +171,7 @@ class BankAPI(BaseHTTPRequestHandler):
                     b'{"error":"receiver not found"}'
                 )
 
+                cur.close()
                 conn.close()
                 return
 
@@ -201,14 +185,15 @@ class BankAPI(BaseHTTPRequestHandler):
                     b'{"error":"insufficient funds"}'
                 )
 
+                cur.close()
                 conn.close()
                 return
 
             cur.execute(
                 """
                 UPDATE accounts
-                SET balance = balance - ?
-                WHERE username = ?
+                SET balance = balance - %s
+                WHERE username = %s
                 """,
                 (amount, sender)
             )
@@ -216,21 +201,20 @@ class BankAPI(BaseHTTPRequestHandler):
             cur.execute(
                 """
                 UPDATE accounts
-                SET balance = balance + ?
-                WHERE username = ?
+                SET balance = balance + %s
+                WHERE username = %s
                 """,
                 (amount, receiver)
             )
 
             conn.commit()
+
+            cur.close()
             conn.close()
 
             self.send_response(200)
             self.add_cors_headers()
-            self.send_header(
-                "Content-Type",
-                "application/json"
-            )
+            self.send_header("Content-Type", "application/json")
             self.end_headers()
 
             self.wfile.write(
@@ -247,11 +231,12 @@ class BankAPI(BaseHTTPRequestHandler):
                 b'{"error":"endpoint not found"}'
             )
 
+
 server = HTTPServer(
-    ("0.0.0.0", 8080),
+    ("0.0.0.0", 8000),
     BankAPI
 )
 
-print("Bank API started on port 8080")
+print("Bank API started on port 8000")
 
 server.serve_forever()

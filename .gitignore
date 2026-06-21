@@ -1,5 +1,15 @@
 __pycache__/
 *.pyc
-.env
-*.log
+
 *.db
+*.sqlite
+
+.env
+
+bankdb.sql
+
+*.log
+
+.vscode/
+
+node_modules/
