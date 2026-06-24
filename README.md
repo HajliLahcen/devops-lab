@@ -163,15 +163,6 @@ http://localhost:3000
 * Prometheus Monitoring
 * Grafana Dashboards
 
-### Planned
-
-* Kubernetes (Kind)
-* Deployments & Services
-* Persistent Volumes
-* Jenkins CI/CD
-* ArgoCD GitOps
-* Helm Charts
-
 ---
 
 ## Author
